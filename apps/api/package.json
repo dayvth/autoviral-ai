@@ -1,0 +1,53 @@
+{
+  "name": "@autoviral/api",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "lint": "eslint src --ext .ts",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@autoviral/database": "*",
+    "express": "^4.21.2",
+    "cors": "^2.8.5",
+    "helmet": "^8.0.0",
+    "morgan": "^1.10.0",
+    "compression": "^1.7.5",
+    "express-rate-limit": "^7.5.0",
+    "express-validator": "^7.2.1",
+    "jsonwebtoken": "^9.0.2",
+    "bcryptjs": "^2.4.3",
+    "bullmq": "^5.34.0",
+    "ioredis": "^5.4.2",
+    "@supabase/supabase-js": "^2.47.10",
+    "stripe": "^17.5.0",
+    "axios": "^1.7.9",
+    "zod": "^3.24.1",
+    "dayjs": "^1.11.13",
+    "winston": "^3.17.0",
+    "uuid": "^11.0.5",
+    "dotenv": "^16.4.7",
+    "multer": "^1.4.5-lts.1",
+    "socket.io": "^4.8.1",
+    "node-cron": "^3.0.3",
+    "openai": "^4.77.0",
+    "@anthropic-ai/sdk": "^0.36.1",
+    "@google/generative-ai": "^0.21.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.0",
+    "@types/cors": "^2.8.17",
+    "@types/morgan": "^1.9.9",
+    "@types/compression": "^1.7.5",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/uuid": "^10.0.0",
+    "@types/multer": "^1.4.12",
+    "tsx": "^4.19.2"
+  }
+}

@@ -1,0 +1,26 @@
+FROM node:22-alpine AS base
+RUN apk add --no-cache ffmpeg curl libc6-compat
+WORKDIR /app
+
+ARG WORKER
+
+FROM base AS deps
+COPY package.json turbo.json ./
+COPY workers/${WORKER}/package.json ./workers/${WORKER}/
+COPY packages/database/package.json ./packages/database/
+RUN npm install --workspaces --include-workspace-root
+
+FROM deps AS builder
+ARG WORKER
+COPY workers/${WORKER} ./workers/${WORKER}
+COPY packages/database ./packages/database
+RUN cd packages/database && npx prisma generate
+RUN cd workers/${WORKER} && npm run build
+
+FROM base AS runner
+ARG WORKER
+ENV NODE_ENV=production
+COPY --from=builder /app/workers/${WORKER}/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages/database ./packages/database
+CMD ["node", "dist/index.js"]

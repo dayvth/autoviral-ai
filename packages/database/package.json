@@ -1,0 +1,28 @@
+{
+  "name": "@autoviral/database",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:studio": "prisma studio",
+    "db:reset": "prisma migrate reset --force"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0"
+  },
+  "devDependencies": {
+    "prisma": "^5.22.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  },
+  "exports": {
+    ".": {
+      "require": "./node_modules/.prisma/client/index.js",
+      "import": "./node_modules/.prisma/client/index.js",
+      "types": "./node_modules/.prisma/client/index.d.ts"
+    }
+  }
+}

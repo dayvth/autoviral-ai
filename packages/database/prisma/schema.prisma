@@ -1,0 +1,624 @@
+// AutoViral AI — Complete Prisma Schema
+// Database: PostgreSQL via Supabase
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================================
+// AUTH & USERS
+// ============================================================
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String?
+  avatarUrl     String?
+  plan          Plan     @default(FREE)
+  planExpiresAt DateTime?
+  stripeCustomerId String? @unique
+  isAdmin       Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  niches          Niche[]
+  videos          Video[]
+  socialAccounts  SocialAccount[]
+  schedules       Schedule[]
+  aiGenerations   AiGeneration[]
+  jobs            Job[]
+  automationLogs  AutomationLog[]
+  subscriptions   Subscription[]
+  settings        UserSettings?
+  analytics       Analytics[]
+
+  @@map("users")
+}
+
+model UserSettings {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  defaultLanguage     String   @default("pt-BR")
+  defaultVoiceId      String?
+  defaultVideoDuration Int     @default(60)
+  defaultVideoStyle   VideoStyle @default(CINEMATIC)
+  defaultHumor        HumorLevel @default(NEUTRAL)
+  postingFrequency    PostingFrequency @default(DAILY)
+  defaultCta          String?
+  brandName           String?
+  brandColors         Json?    // { primary, secondary, accent }
+  watermarkUrl        String?
+  autoImprove         Boolean  @default(true)
+  notifyOnUpload      Boolean  @default(true)
+  notifyOnViral       Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_settings")
+}
+
+// ============================================================
+// BILLING & SUBSCRIPTIONS
+// ============================================================
+
+model Subscription {
+  id                 String             @id @default(cuid())
+  userId             String
+  stripeSubscriptionId String?          @unique
+  stripePriceId      String?
+  plan               Plan               @default(FREE)
+  status             SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  cancelAtPeriodEnd  Boolean            @default(false)
+  trialEnd           DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+// ============================================================
+// NICHES & CONTENT STRATEGY
+// ============================================================
+
+model Niche {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String?
+  slug        String
+  isActive    Boolean  @default(true)
+  languages   String[] @default(["pt-BR"])
+  platforms   Platform[]
+  keywords    String[]
+  competitors String[] // competitor channel URLs
+  postingFrequency PostingFrequency @default(DAILY)
+  videoStyle  VideoStyle @default(CINEMATIC)
+  voiceId     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videos      Video[]
+  trends      Trend[]
+  schedules   Schedule[]
+
+  @@unique([userId, slug])
+  @@map("niches")
+}
+
+// ============================================================
+// TRENDS
+// ============================================================
+
+model Trend {
+  id          String     @id @default(cuid())
+  nicheId     String?
+  title       String
+  description String?
+  source      TrendSource
+  sourceUrl   String?
+  keywords    String[]
+  hashtags    String[]
+  viralScore  Float      @default(0) // 0-100
+  region      String?
+  language    String     @default("pt-BR")
+  peakAt      DateTime?
+  isProcessed Boolean    @default(false)
+  rawData     Json?
+  createdAt   DateTime   @default(now())
+  expiresAt   DateTime?
+
+  // Relations
+  niche  Niche?  @relation(fields: [nicheId], references: [id])
+  scripts Script[]
+
+  @@map("trends")
+}
+
+// ============================================================
+// SCRIPTS & AI GENERATION
+// ============================================================
+
+model Script {
+  id           String       @id @default(cuid())
+  nicheId      String?
+  trendId      String?
+  title        String
+  hook         String       // opening hook (first 3 seconds)
+  body         String       // main content
+  cta          String?      // call to action
+  description  String?      // video description
+  hashtags     String[]
+  keywords     String[]
+  language     String       @default("pt-BR")
+  platform     Platform     @default(YOUTUBE_SHORTS)
+  duration     Int          @default(60) // seconds
+  style        VideoStyle   @default(CINEMATIC)
+  viralScore   Float        @default(0)
+  retentionScore Float      @default(0)
+  status       ScriptStatus @default(DRAFT)
+  aiModel      String?      // which AI model generated it
+  aiVersion    Int          @default(1)
+  parentId     String?      // for A/B versions
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  // Relations
+  trend    Trend?   @relation(fields: [trendId], references: [id])
+  videos   Video[]
+  aiGenerations AiGeneration[]
+
+  @@map("scripts")
+}
+
+// ============================================================
+// VOICES
+// ============================================================
+
+model Voice {
+  id           String   @id @default(cuid())
+  externalId   String   @unique // ElevenLabs voice ID
+  name         String
+  description  String?
+  language     String
+  gender       String?
+  previewUrl   String?
+  isActive     Boolean  @default(true)
+  provider     String   @default("elevenlabs")
+  createdAt    DateTime @default(now())
+
+  @@map("voices")
+}
+
+// ============================================================
+// VIDEOS
+// ============================================================
+
+model Video {
+  id              String      @id @default(cuid())
+  userId          String
+  nicheId         String?
+  scriptId        String?
+  title           String
+  description     String?
+  hashtags        String[]
+  language        String      @default("pt-BR")
+  platform        Platform    @default(YOUTUBE_SHORTS)
+  status          VideoStatus @default(PENDING)
+  duration        Int?        // seconds
+  resolution      String?     // "1920x1080"
+  orientation     Orientation @default(VERTICAL)
+  thumbnailUrl    String?
+  videoUrl        String?     // final rendered video
+  rawVideoUrl     String?     // before post-processing
+  audioUrl        String?     // narration audio
+  subtitlesUrl    String?     // SRT or VTT file
+  storageProvider String      @default("supabase")
+  storagePath     String?
+  fileSizeBytes   Int?
+  viralScore      Float?
+  renderJobId     String?
+  errorMessage    String?
+  metadata        Json?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  publishedAt     DateTime?
+
+  // Relations
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  niche     Niche?        @relation(fields: [nicheId], references: [id])
+  script    Script?       @relation(fields: [scriptId], references: [id])
+  uploads   Upload[]
+  analytics Analytics[]
+  thumbnails Thumbnail[]
+  clips     Clip[]
+
+  @@map("videos")
+}
+
+// ============================================================
+// THUMBNAILS
+// ============================================================
+
+model Thumbnail {
+  id          String          @id @default(cuid())
+  videoId     String
+  url         String
+  isSelected  Boolean         @default(false)
+  ctr         Float?          // A/B test result
+  style       ThumbnailStyle  @default(AUTO)
+  aiPrompt    String?
+  createdAt   DateTime        @default(now())
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@map("thumbnails")
+}
+
+// ============================================================
+// CLIPS (auto-generated short clips from long videos)
+// ============================================================
+
+model Clip {
+  id        String   @id @default(cuid())
+  videoId   String
+  startTime Float    // seconds
+  endTime   Float
+  url       String?
+  score     Float    @default(0) // viral potential
+  status    String   @default("pending")
+  createdAt DateTime @default(now())
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@map("clips")
+}
+
+// ============================================================
+// SOCIAL ACCOUNTS
+// ============================================================
+
+model SocialAccount {
+  id              String   @id @default(cuid())
+  userId          String
+  platform        Platform
+  accountId       String   // platform's user/channel ID
+  accountName     String
+  accountUrl      String?
+  avatarUrl       String?
+  accessToken     String?  // encrypted
+  refreshToken    String?  // encrypted
+  tokenExpiresAt  DateTime?
+  scopes          String[]
+  isActive        Boolean  @default(true)
+  isVerified      Boolean  @default(false)
+  followersCount  Int      @default(0)
+  lastSyncAt      DateTime?
+  metadata        Json?    // platform-specific extra data
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  uploads Upload[]
+
+  @@unique([userId, platform, accountId])
+  @@map("social_accounts")
+}
+
+// ============================================================
+// UPLOADS & PUBLISHING
+// ============================================================
+
+model Upload {
+  id              String        @id @default(cuid())
+  videoId         String
+  socialAccountId String
+  platform        Platform
+  platformVideoId String?       // ID returned by the platform
+  platformUrl     String?
+  status          UploadStatus  @default(PENDING)
+  scheduledAt     DateTime?
+  publishedAt     DateTime?
+  errorMessage    String?
+  retryCount      Int           @default(0)
+  metadata        Json?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  video         Video         @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  socialAccount SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+  analytics     Analytics[]
+
+  @@map("uploads")
+}
+
+// ============================================================
+// SCHEDULES
+// ============================================================
+
+model Schedule {
+  id          String   @id @default(cuid())
+  userId      String
+  nicheId     String?
+  name        String
+  cronExpr    String   // cron expression
+  platforms   Platform[]
+  isActive    Boolean  @default(true)
+  timezone    String   @default("America/Sao_Paulo")
+  nextRunAt   DateTime?
+  lastRunAt   DateTime?
+  runCount    Int      @default(0)
+  settings    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  niche Niche? @relation(fields: [nicheId], references: [id])
+
+  @@map("schedules")
+}
+
+// ============================================================
+// ANALYTICS
+// ============================================================
+
+model Analytics {
+  id               String   @id @default(cuid())
+  userId           String
+  videoId          String?
+  uploadId         String?
+  platform         Platform?
+  date             DateTime @default(now())
+  views            Int      @default(0)
+  likes            Int      @default(0)
+  comments         Int      @default(0)
+  shares           Int      @default(0)
+  saves            Int      @default(0)
+  watchTimeSeconds Int      @default(0)
+  retentionRate    Float?   // percentage 0-100
+  ctr              Float?   // click-through rate
+  impressions      Int      @default(0)
+  reachCount       Int      @default(0)
+  followers        Int      @default(0)
+  estimatedRpm     Float?   // $ per 1000 views
+  rawData          Json?
+  createdAt        DateTime @default(now())
+
+  // Relations
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video  Video?  @relation(fields: [videoId], references: [id])
+  upload Upload? @relation(fields: [uploadId], references: [id])
+
+  @@map("analytics")
+}
+
+// ============================================================
+// AI GENERATIONS (log of all AI calls)
+// ============================================================
+
+model AiGeneration {
+  id            String            @id @default(cuid())
+  userId        String
+  scriptId      String?
+  type          AiGenerationType
+  provider      String            // openai, anthropic, gemini
+  model         String
+  prompt        String
+  response      String?
+  tokensUsed    Int?
+  costUsd       Float?
+  durationMs    Int?
+  status        String            @default("success")
+  errorMessage  String?
+  metadata      Json?
+  createdAt     DateTime          @default(now())
+
+  // Relations
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  script Script? @relation(fields: [scriptId], references: [id])
+
+  @@map("ai_generations")
+}
+
+// ============================================================
+// JOBS (queue tracking)
+// ============================================================
+
+model Job {
+  id          String    @id @default(cuid())
+  userId      String?
+  bullJobId   String?   @unique // BullMQ job ID
+  queue       String    // which queue
+  type        String    // job type
+  status      JobStatus @default(PENDING)
+  payload     Json?
+  result      Json?
+  errorMessage String?
+  priority    Int       @default(0)
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3)
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("jobs")
+}
+
+// ============================================================
+// AUTOMATION LOGS
+// ============================================================
+
+model AutomationLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  entity     String?
+  entityId   String?
+  status     String   @default("success")
+  message    String?
+  metadata   Json?
+  duration   Int?     // ms
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("automation_logs")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum Plan {
+  FREE
+  PRO
+  BUSINESS
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  TRIALING
+  INCOMPLETE
+}
+
+enum Platform {
+  YOUTUBE
+  YOUTUBE_SHORTS
+  TIKTOK
+  INSTAGRAM
+  INSTAGRAM_REELS
+  FACEBOOK
+  FACEBOOK_REELS
+  TWITTER
+}
+
+enum VideoStatus {
+  PENDING
+  SCRIPT_READY
+  VOICE_READY
+  RENDERING
+  RENDERED
+  CAPTIONED
+  THUMBNAIL_READY
+  READY
+  UPLOADING
+  PUBLISHED
+  FAILED
+  ARCHIVED
+}
+
+enum UploadStatus {
+  PENDING
+  SCHEDULED
+  UPLOADING
+  PUBLISHED
+  FAILED
+  CANCELLED
+}
+
+enum JobStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+  FAILED
+  DELAYED
+  STALLED
+}
+
+enum VideoStyle {
+  CINEMATIC
+  DOCUMENTARY
+  ENERGETIC
+  CALM
+  COMEDY
+  EDUCATIONAL
+  MOTIVATIONAL
+  LUXURY
+  RAW
+}
+
+enum HumorLevel {
+  NEUTRAL
+  LIGHT
+  HEAVY
+  DARK
+  SARCASTIC
+}
+
+enum PostingFrequency {
+  HOURLY
+  THREE_TIMES_DAILY
+  DAILY
+  TWICE_WEEKLY
+  WEEKLY
+  MONTHLY
+}
+
+enum Orientation {
+  VERTICAL
+  HORIZONTAL
+  SQUARE
+}
+
+enum TrendSource {
+  YOUTUBE
+  TIKTOK
+  GOOGLE
+  REDDIT
+  TWITTER
+  NEWS
+  MANUAL
+}
+
+enum ScriptStatus {
+  DRAFT
+  APPROVED
+  REJECTED
+  IN_PRODUCTION
+  COMPLETED
+}
+
+enum AiGenerationType {
+  TREND_ANALYSIS
+  HOOK_GENERATION
+  SCRIPT_GENERATION
+  TITLE_GENERATION
+  DESCRIPTION_GENERATION
+  HASHTAG_GENERATION
+  THUMBNAIL_PROMPT
+  PERFORMANCE_ANALYSIS
+  VIRAL_PREDICTION
+  CONTENT_IMPROVEMENT
+}
+
+enum ThumbnailStyle {
+  AUTO
+  MRBEAST
+  TIKTOK
+  MINIMAL
+  BOLD
+  DARK_LUXURY
+}

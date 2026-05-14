@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+.next/
+out/
+build/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+.venv/
+*.egg-info/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# DB
+*.db
+*.sqlite
+
+# Media/temp
+/tmp/
+data_raw/
+data_processed/
+whisper_cache/
+
+# Prisma
+packages/database/node_modules/
+
+# Turbo
+.turbo/

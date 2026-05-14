@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 20% 6%;
+    --foreground: 220 10% 95%;
+    --card: 220 18% 9%;
+    --card-foreground: 220 10% 95%;
+    --popover: 220 18% 9%;
+    --popover-foreground: 220 10% 95%;
+    --primary: 230 100% 62%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 15% 15%;
+    --secondary-foreground: 220 10% 85%;
+    --muted: 220 15% 13%;
+    --muted-foreground: 220 8% 55%;
+    --accent: 230 80% 65%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 75% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 15% 15%;
+    --input: 220 15% 13%;
+    --ring: 230 100% 62%;
+    --radius: 0.75rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/40;
+  }
+}
+
+@layer utilities {
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-brand-400 to-viral-purple;
+  }
+
+  /* Glass effect */
+  .glass {
+    @apply bg-card/60 backdrop-blur-xl border border-border/50;
+  }
+
+  /* Glow card */
+  .glow-card {
+    @apply relative overflow-hidden;
+  }
+  .glow-card::before {
+    content: '';
+    @apply absolute -inset-px rounded-xl opacity-0 transition-opacity duration-300;
+    background: radial-gradient(400px at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(59, 91, 255, 0.15), transparent 60%);
+  }
+  .glow-card:hover::before {
+    @apply opacity-100;
+  }
+
+  /* Shimmer loading */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 25%,
+      hsl(var(--secondary)) 50%,
+      hsl(var(--muted)) 75%
+    );
+    background-size: 200% 100%;
+    @apply animate-shimmer;
+  }
+
+  /* Viral score badge colors */
+  .viral-low { @apply text-red-400 bg-red-400/10 border-red-400/20; }
+  .viral-mid { @apply text-amber-400 bg-amber-400/10 border-amber-400/20; }
+  .viral-high { @apply text-green-400 bg-green-400/10 border-green-400/20; }
+  .viral-ultra { @apply text-viral-purple bg-viral-purple/10 border-viral-purple/20; }
+}

@@ -1,10 +1,8 @@
-import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
 import { enqueueVoice } from '../lib/queue';
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export interface GenerateScriptOptions {
@@ -61,25 +59,23 @@ export async function generateScript(opts: GenerateScriptOptions) {
       style: style as any,
       viralScore,
       status: 'APPROVED',
-      aiModel: 'claude-sonnet-4-6',
+      aiModel: 'gpt-4o-mini',
     },
   });
 
-  // Log all AI interactions
   await prisma.aiGeneration.create({
     data: {
       userId,
       scriptId: script.id,
       type: 'SCRIPT_GENERATION',
-      provider: 'anthropic',
-      model: 'claude-sonnet-4-6',
+      provider: 'openai',
+      model: 'gpt-4o-mini',
       prompt: context,
       response: JSON.stringify({ hook, body, cta, meta }),
       status: 'success',
     },
   });
 
-  // Mark trend as processed
   if (trendId) {
     await prisma.trend.update({ where: { id: trendId }, data: { isProcessed: true } });
   }
@@ -89,15 +85,17 @@ export async function generateScript(opts: GenerateScriptOptions) {
 }
 
 async function runHookAgent(context: string, language: string, platform: string): Promise<string> {
-  const msg = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
+  const completion = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
     max_tokens: 300,
     messages: [
       {
+        role: 'system',
+        content: 'You are an elite viral video hook writer. Your hooks stop people from scrolling within the first 3 seconds.',
+      },
+      {
         role: 'user',
-        content: `You are an elite viral video hook writer. Your hooks stop people from scrolling within the first 3 seconds.
-
-Platform: ${platform}
+        content: `Platform: ${platform}
 Language: ${language}
 ${context}
 
@@ -113,7 +111,7 @@ Return ONLY the hook text, nothing else.`,
     ],
   });
 
-  return (msg.content[0] as { text: string }).text.trim();
+  return completion.choices[0].message.content!.trim();
 }
 
 async function runStoryAgent(
@@ -126,15 +124,17 @@ async function runStoryAgent(
   const wordsPerMinute = 150;
   const targetWords = Math.round((duration / 60) * wordsPerMinute);
 
-  const msg = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
+  const completion = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
     max_tokens: 1500,
     messages: [
       {
+        role: 'system',
+        content: `You are a viral video scriptwriter specializing in ${style} content.`,
+      },
+      {
         role: 'user',
-        content: `You are a viral video scriptwriter specializing in ${style} content.
-
-Hook (already written): "${hook}"
+        content: `Hook (already written): "${hook}"
 Context: ${context}
 Target duration: ${duration} seconds (~${targetWords} words)
 Language: ${language}
@@ -158,12 +158,12 @@ Return ONLY the script body (no hook, no CTA), formatted for narration.`,
     ],
   });
 
-  return (msg.content[0] as { text: string }).text.trim();
+  return completion.choices[0].message.content!.trim();
 }
 
 async function runCtaAgent(body: string, platform: string, language: string): Promise<string> {
-  const msg = await anthropic.messages.create({
-    model: 'claude-haiku-4-5-20251001',
+  const completion = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
     max_tokens: 150,
     messages: [
       {
@@ -182,7 +182,7 @@ Return ONLY the CTA text.`,
     ],
   });
 
-  return (msg.content[0] as { text: string }).text.trim();
+  return completion.choices[0].message.content!.trim();
 }
 
 async function runMetaAgent(opts: {

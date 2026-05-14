@@ -1,12 +1,10 @@
 import 'dotenv/config';
 import { Worker, Job } from 'bullmq';
 import { PrismaClient } from '@prisma/client';
-import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import winston from 'winston';
 
 const prisma = new PrismaClient();
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const logger = winston.createLogger({
@@ -75,7 +73,7 @@ const worker = new Worker(
         duration,
         style: style as any,
         status: 'APPROVED',
-        aiModel: 'claude-sonnet-4-6',
+        aiModel: 'gpt-4o-mini',
       },
     });
 
@@ -130,12 +128,14 @@ logger.info('Script worker started');
 // ── Agents ────────────────────────────────────────────────────
 
 async function generateHook(context: string, language: string, platform: string, style: string): Promise<string> {
-  const msg = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
+  const completion = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
     max_tokens: 300,
-    messages: [{
-      role: 'user',
-      content: `Write a viral ${style} hook for ${platform} in ${language}.
+    messages: [
+      { role: 'system', content: 'You are an elite viral video hook writer.' },
+      {
+        role: 'user',
+        content: `Write a viral ${style} hook for ${platform} in ${language}.
 ${context}
 
 Requirements:
@@ -143,24 +143,26 @@ Requirements:
 - Use emotional triggers: curiosity, surprise, desire, or fear
 - Sound natural and conversational
 - Avoid "Did you know" and generic openers
-- No emojis unless platform is TikTok/Instagram
 
 Return ONLY the hook text.`,
-    }],
+      },
+    ],
   });
-  return (msg.content[0] as any).text.trim();
+  return completion.choices[0].message.content!.trim();
 }
 
 async function generateBody(
   hook: string, context: string, language: string, duration: number, style: string
 ): Promise<string> {
   const targetWords = Math.round((duration / 60) * 150);
-  const msg = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
+  const completion = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
     max_tokens: 2000,
-    messages: [{
-      role: 'user',
-      content: `Continue this viral video script in ${language}.
+    messages: [
+      { role: 'system', content: `You are a viral video scriptwriter specializing in ${style} content.` },
+      {
+        role: 'user',
+        content: `Continue this viral video script in ${language}.
 
 Hook: "${hook}"
 Style: ${style}
@@ -174,14 +176,15 @@ Write the script body:
 
 Format: Short sentences. High energy. Add [PAUSE] for dramatic breaks.
 Return ONLY the script body, no hook, no CTA.`,
-    }],
+      },
+    ],
   });
-  return (msg.content[0] as any).text.trim();
+  return completion.choices[0].message.content!.trim();
 }
 
 async function generateCta(body: string, platform: string, language: string): Promise<string> {
-  const msg = await anthropic.messages.create({
-    model: 'claude-haiku-4-5-20251001',
+  const completion = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
     max_tokens: 150,
     messages: [{
       role: 'user',
@@ -190,7 +193,7 @@ Script ends: "...${body.slice(-150)}"
 Make it feel organic, not pushy. Return ONLY the CTA.`,
     }],
   });
-  return (msg.content[0] as any).text.trim();
+  return completion.choices[0].message.content!.trim();
 }
 
 async function generateMeta(opts: { hook: string; body: string; niche: string; platform: string; language: string }) {

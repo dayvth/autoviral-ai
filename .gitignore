@@ -47,3 +47,5 @@ packages/database/node_modules/
 
 # Turbo
 .turbo/
+
+packages/database/migration_init.sql

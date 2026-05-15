@@ -116,7 +116,7 @@ function signToken(user: { id: string; email: string; plan: string; isAdmin: boo
   return jwt.sign(
     { sub: user.id, email: user.email, plan: user.plan, isAdmin: user.isAdmin },
     process.env.JWT_SECRET!,
-    { expiresIn: process.env.JWT_EXPIRES_IN ?? '7d' }
+    { expiresIn: (process.env.JWT_EXPIRES_IN ?? '7d') as any }
   );
 }
 

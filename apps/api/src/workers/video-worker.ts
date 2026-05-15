@@ -53,30 +53,38 @@ export function startVideoWorker() {
         await job.updateProgress(15);
         emit(userId, videoId, 15, 'Áudio baixado. Buscando clips...');
 
-        // 2. Fetch background video clips from Pexels
+        // 2. Fetch background video clips from Pexels (optional)
         const script = await prisma.script.findUniqueOrThrow({ where: { id: scriptId } });
         const bgClips = await fetchBackgroundClips(script.keywords, orientation, duration);
         await job.updateProgress(25);
-        emit(userId, videoId, 25, `${bgClips.length} clips encontrados. Baixando...`);
 
-        // 3. Download background clips
-        const clipPaths: string[] = [];
-        for (let i = 0; i < bgClips.length; i++) {
-          const clipPath = path.join(workDir, `clip_${i}.mp4`);
-          await downloadFile(bgClips[i], clipPath);
-          clipPaths.push(clipPath);
-          emit(userId, videoId, 25 + Math.round((i / bgClips.length) * 15), `Clip ${i + 1}/${bgClips.length} baixado`);
+        // 3. Build background (from clips or gradient fallback)
+        const bgPath = path.join(workDir, 'background.mp4');
+
+        if (bgClips.length > 0) {
+          emit(userId, videoId, 25, `${bgClips.length} clips encontrados. Baixando...`);
+          const clipPaths: string[] = [];
+          for (let i = 0; i < bgClips.length; i++) {
+            const clipPath = path.join(workDir, `clip_${i}.mp4`);
+            await downloadFile(bgClips[i], clipPath);
+            clipPaths.push(clipPath);
+            emit(userId, videoId, 25 + Math.round((i / bgClips.length) * 15), `Clip ${i + 1}/${bgClips.length} baixado`);
+          }
+          await job.updateProgress(45);
+          emit(userId, videoId, 50, 'Montando fundo...');
+          const audioDurationForBg = await getMediaDuration(audioPath);
+          await assembleBackground(clipPaths, bgPath, audioDurationForBg, orientation);
+        } else {
+          emit(userId, videoId, 35, 'Gerando fundo visual...');
+          const audioDurationForBg = await getMediaDuration(audioPath);
+          await generateGradientBackground(workDir, bgPath, audioDurationForBg, orientation);
+          await job.updateProgress(45);
         }
-        await job.updateProgress(45);
+
+        await job.updateProgress(60);
 
         // 4. Get audio duration
         const audioDuration = await getMediaDuration(audioPath);
-
-        // 5. Assemble background
-        emit(userId, videoId, 50, 'Montando fundo...');
-        const bgPath = path.join(workDir, 'background.mp4');
-        await assembleBackground(clipPaths, bgPath, audioDuration, orientation);
-        await job.updateProgress(60);
 
         // 6. Generate subtitles
         emit(userId, videoId, 62, 'Gerando legendas...');
@@ -215,6 +223,8 @@ async function generateThumbnail(videoPath: string, outputPath: string) {
 }
 
 async function fetchBackgroundClips(keywords: string[], orientation: string, duration: number): Promise<string[]> {
+  if (!process.env.PEXELS_API_KEY) return [];
+
   const query = keywords.slice(0, 2).join(' ');
   const perPage = Math.min(Math.ceil(duration / 10), 10);
 
@@ -226,7 +236,7 @@ async function fetchBackgroundClips(keywords: string[], orientation: string, dur
         orientation: orientation === 'VERTICAL' ? 'portrait' : 'landscape',
         size: 'medium',
       },
-      headers: { Authorization: process.env.PEXELS_API_KEY! },
+      headers: { Authorization: process.env.PEXELS_API_KEY },
       timeout: 15_000,
     });
 
@@ -242,6 +252,16 @@ async function fetchBackgroundClips(keywords: string[], orientation: string, dur
   } catch {
     return [];
   }
+}
+
+async function generateGradientBackground(workDir: string, output: string, duration: number, orientation: string) {
+  const w = orientation === 'VERTICAL' ? 1080 : 1920;
+  const h = orientation === 'VERTICAL' ? 1920 : 1080;
+  // Dark gradient background — looks clean for any niche
+  await execAsync(
+    `ffmpeg -y -f lavfi -i "gradients=s=${w}x${h}:c0=0x0a0a0f:c1=0x1a0a2e:c2=0x16213e:nb_colors=3:speed=0.3,format=yuv420p" ` +
+    `-t ${duration} -c:v libx264 -preset fast -crf 23 "${output}"`
+  );
 }
 
 async function uploadToStorage(videoId: string, videoPath: string, thumbPath: string, supabase: ReturnType<typeof createClient>) {

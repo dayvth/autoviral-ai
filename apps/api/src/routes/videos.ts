@@ -66,6 +66,46 @@ router.get('/:id', param('id').isString(), async (req: AuthRequest, res: Respons
   }
 });
 
+const NICHE_DEFAULTS: Record<string, string> = {
+  curiosidades: 'Curiosidades',
+  motivacao: 'Motivação',
+  financas: 'Finanças',
+  ia: 'IA & Tech',
+  fitness: 'Fitness',
+  luxo: 'Luxo',
+  esportes: 'Esportes',
+  anime: 'Anime',
+  historias: 'Histórias',
+  negocios: 'Negócios',
+  carros: 'Carros',
+  frases: 'Frases',
+};
+
+async function resolveOrCreateNiche(userId: string, nicheId: string, platform: string) {
+  // Try by real DB id first
+  let niche = await prisma.niche.findFirst({ where: { id: nicheId, userId } });
+  if (niche) return niche;
+
+  // Try by slug
+  niche = await prisma.niche.findFirst({ where: { slug: nicheId, userId } });
+  if (niche) return niche;
+
+  // Auto-create with sensible defaults
+  const name = NICHE_DEFAULTS[nicheId] ?? nicheId;
+  return prisma.niche.create({
+    data: {
+      userId,
+      name,
+      slug: nicheId,
+      keywords: [nicheId],
+      languages: ['pt-BR'],
+      platforms: [platform as any],
+      postingFrequency: 'DAILY',
+      videoStyle: 'CINEMATIC',
+    },
+  });
+}
+
 // POST /api/videos/generate — trigger full video creation pipeline
 router.post(
   '/generate',
@@ -84,11 +124,14 @@ router.post(
       const { nicheId, platform, duration = 60, trendId, voiceId } = req.body;
       const userId = req.user!.id;
 
+      // Resolve niche — auto-creates if slug not yet in DB
+      const niche = await resolveOrCreateNiche(userId, nicheId, platform);
+
       // Create video record
       const video = await prisma.video.create({
         data: {
           userId,
-          nicheId,
+          nicheId: niche.id,
           title: 'Generating...',
           platform,
           status: 'PENDING',
@@ -100,10 +143,9 @@ router.post(
       });
 
       // Enqueue script generation (voice and video will be chained in workers)
-      const niche = await prisma.niche.findUniqueOrThrow({ where: { id: nicheId } });
 
       const job = await enqueueScript({
-        nicheId,
+        nicheId: niche.id,
         trendId,
         userId,
         language: niche.languages[0] ?? 'pt-BR',

@@ -34,7 +34,7 @@ router.get('/:id', async (req: AuthRequest, res: Response, next) => {
 router.patch('/:id', async (req: AuthRequest, res: Response, next) => {
   try {
     const script = await prisma.script.findFirst({
-      where: { id: req.params.id, videos: { some: { userId: req.user!.id } } },
+      where: { id: req.params.id as string, videos: { some: { userId: req.user!.id } } },
     });
     if (!script) throw new AppError(404, 'Script not found');
 

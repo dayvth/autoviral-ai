@@ -49,7 +49,7 @@ router.get('/', async (req: AuthRequest, res: Response, next) => {
 router.get('/:id', param('id').isString(), async (req: AuthRequest, res: Response, next) => {
   try {
     const video = await prisma.video.findFirst({
-      where: { id: req.params.id, userId: req.user!.id },
+      where: { id: req.params.id as string, userId: req.user!.id },
       include: {
         script: true,
         niche: true,
@@ -135,7 +135,7 @@ router.post(
 router.delete('/:id', async (req: AuthRequest, res: Response, next) => {
   try {
     const video = await prisma.video.findFirst({
-      where: { id: req.params.id, userId: req.user!.id },
+      where: { id: req.params.id as string, userId: req.user!.id },
     });
 
     if (!video) throw new AppError(404, 'Video not found');

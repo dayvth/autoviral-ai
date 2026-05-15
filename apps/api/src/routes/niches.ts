@@ -71,7 +71,7 @@ router.post(
 router.patch('/:id', async (req: AuthRequest, res: Response, next) => {
   try {
     const niche = await prisma.niche.findFirst({
-      where: { id: req.params.id, userId: req.user!.id },
+      where: { id: req.params.id as string, userId: req.user!.id },
     });
     if (!niche) throw new AppError(404, 'Niche not found');
 
@@ -99,7 +99,7 @@ router.patch('/:id', async (req: AuthRequest, res: Response, next) => {
 // DELETE /api/niches/:id
 router.delete('/:id', async (req: AuthRequest, res: Response, next) => {
   try {
-    const niche = await prisma.niche.findFirst({ where: { id: req.params.id, userId: req.user!.id } });
+    const niche = await prisma.niche.findFirst({ where: { id: req.params.id as string, userId: req.user!.id } });
     if (!niche) throw new AppError(404, 'Niche not found');
     await prisma.niche.delete({ where: { id: niche.id } });
     res.json({ success: true });

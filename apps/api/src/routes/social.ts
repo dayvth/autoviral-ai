@@ -58,7 +58,7 @@ router.post('/accounts', async (req: AuthRequest, res: Response, next) => {
 router.delete('/accounts/:id', async (req: AuthRequest, res: Response, next) => {
   try {
     const account = await prisma.socialAccount.findFirst({
-      where: { id: req.params.id, userId: req.user!.id },
+      where: { id: req.params.id as string, userId: req.user!.id },
     });
     if (!account) throw new AppError(404, 'Account not found');
     await prisma.socialAccount.delete({ where: { id: account.id } });

@@ -28,7 +28,7 @@ router.post('/', async (req: AuthRequest, res: Response, next) => {
 
 router.patch('/:id', async (req: AuthRequest, res: Response, next) => {
   try {
-    const schedule = await prisma.schedule.findFirst({ where: { id: req.params.id, userId: req.user!.id } });
+    const schedule = await prisma.schedule.findFirst({ where: { id: req.params.id as string, userId: req.user!.id } });
     if (!schedule) throw new AppError(404, 'Schedule not found');
     const updated = await prisma.schedule.update({ where: { id: schedule.id }, data: req.body });
     res.json({ success: true, data: updated });
@@ -37,7 +37,7 @@ router.patch('/:id', async (req: AuthRequest, res: Response, next) => {
 
 router.delete('/:id', async (req: AuthRequest, res: Response, next) => {
   try {
-    const schedule = await prisma.schedule.findFirst({ where: { id: req.params.id, userId: req.user!.id } });
+    const schedule = await prisma.schedule.findFirst({ where: { id: req.params.id as string, userId: req.user!.id } });
     if (!schedule) throw new AppError(404, 'Schedule not found');
     await prisma.schedule.delete({ where: { id: schedule.id } });
     res.json({ success: true });

@@ -67,6 +67,17 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', version: process.env.npm_package_version ?? '1.0.0', timestamp: new Date().toISOString() });
 });
 
+// DB connectivity check
+app.get('/health/db', async (_req, res) => {
+  try {
+    const { prisma } = await import('./lib/prisma');
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: 'ok', db: 'connected', url: (process.env.DIRECT_URL || process.env.DATABASE_URL || '').replace(/:([^:@]+)@/, ':***@') });
+  } catch (err: any) {
+    res.status(500).json({ status: 'error', message: err.message, url: (process.env.DIRECT_URL || process.env.DATABASE_URL || '').replace(/:([^:@]+)@/, ':***@') });
+  }
+});
+
 // API routes
 app.use('/api/auth', rateLimiter({ max: 20, window: 60_000 }), authRoutes);
 app.use('/api/niches', rateLimiter(), nicheRoutes);

@@ -140,6 +140,17 @@ async function bootstrap() {
   startVoiceWorker();
   startVideoWorker();
 
+  // Clean up videos stuck in pipeline before this deploy
+  try {
+    const { prisma } = await import('./lib/prisma');
+    const cutoff = new Date(Date.now() - 10 * 60 * 1000);
+    const result = await prisma.video.updateMany({
+      where: { status: { in: ['PENDING', 'SCRIPT_READY', 'VOICE_READY'] }, updatedAt: { lt: cutoff } },
+      data: { status: 'FAILED', errorMessage: 'Timeout — regenerate this video' },
+    });
+    if (result.count > 0) logger.info(`Cleaned up ${result.count} stuck video(s)`);
+  } catch { /* non-fatal */ }
+
   httpServer.listen(PORT, () => {
     logger.info(`🚀 AutoViral AI API running on port ${PORT}`);
     logger.info(`📡 WebSocket ready on port ${PORT}`);

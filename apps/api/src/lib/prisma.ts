@@ -12,7 +12,7 @@ function buildDatasourceUrl(): string {
     const parsed = new URL(raw);
     const password = decodeURIComponent(parsed.password);
     const projectId = 'dvxilqvtotuzxdgyeihc';
-    return `postgresql://postgres.${projectId}:${encodeURIComponent(password)}@aws-0-sa-east-1.pooler.supabase.com:6543/postgres?pgbouncer=true`;
+    return `postgresql://postgres.${projectId}:${encodeURIComponent(password)}@aws-1-sa-east-1.pooler.supabase.com:6543/postgres?pgbouncer=true`;
   } catch {
     return raw;
   }

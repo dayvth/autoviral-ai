@@ -5,7 +5,14 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { logger } from '../lib/logger';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+let _stripe: Stripe | null = null;
+function getStripe(): Stripe {
+  if (!_stripe) {
+    if (!process.env.STRIPE_SECRET_KEY) throw new AppError(503, 'Billing not configured');
+    _stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+  }
+  return _stripe;
+}
 const router = Router();
 
 // POST /api/billing/checkout — create Stripe checkout session
@@ -19,12 +26,12 @@ router.post('/checkout', authenticate, async (req: AuthRequest, res: Response, n
 
     let customerId = user.stripeCustomerId;
     if (!customerId) {
-      const customer = await stripe.customers.create({ email: user.email, name: user.name ?? undefined });
+      const customer = await getStripe().customers.create({ email: user.email, name: user.name ?? undefined });
       customerId = customer.id;
       await prisma.user.update({ where: { id: user.id }, data: { stripeCustomerId: customerId } });
     }
 
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       customer: customerId,
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
@@ -47,7 +54,7 @@ router.post('/portal', authenticate, async (req: AuthRequest, res: Response, nex
     const user = await prisma.user.findUniqueOrThrow({ where: { id: req.user!.id } });
     if (!user.stripeCustomerId) throw new AppError(400, 'No billing account found');
 
-    const session = await stripe.billingPortal.sessions.create({
+    const session = await getStripe().billingPortal.sessions.create({
       customer: user.stripeCustomerId,
       return_url: `${process.env.APP_URL}/billing`,
     });
@@ -64,7 +71,7 @@ export async function handleStripeWebhook(req: Request, res: Response) {
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET!);
+    event = getStripe().webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET!);
   } catch (err) {
     logger.error('[Stripe] Webhook signature verification failed', err);
     return res.status(400).send('Webhook signature invalid');
@@ -74,7 +81,7 @@ export async function handleStripeWebhook(req: Request, res: Response) {
     case 'customer.subscription.created':
     case 'customer.subscription.updated': {
       const sub = event.data.object as Stripe.Subscription;
-      const customer = await stripe.customers.retrieve(sub.customer as string);
+      const customer = await getStripe().customers.retrieve(sub.customer as string);
       const user = await prisma.user.findFirst({ where: { stripeCustomerId: sub.customer as string } });
 
       if (user) {

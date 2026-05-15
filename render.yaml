@@ -57,23 +57,3 @@ services:
         value: 1
       - key: VIDEO_WORKER_CONCURRENCY
         value: 1
-
-  - type: worker
-    name: autoviral-script-worker
-    runtime: node
-    region: oregon
-    plan: free
-    rootDir: workers/script-worker
-    buildCommand: npm install && npm run build
-    startCommand: npm start
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: DATABASE_URL
-        sync: false
-      - key: REDIS_URL
-        sync: false
-      - key: OPENAI_API_KEY
-        sync: false
-      - key: SCRIPT_WORKER_CONCURRENCY
-        value: 2

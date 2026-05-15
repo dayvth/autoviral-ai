@@ -2,10 +2,12 @@
 
 import { motion } from 'framer-motion';
 import { useState } from 'react';
-import { Zap, Settings2, Globe, Clock, Video, ChevronRight, Loader2 } from 'lucide-react';
+import { Zap, Globe, Clock, Video, ChevronRight, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { api } from '@/lib/api/client';
+import { VideoProgressTracker } from '@/components/dashboard/VideoProgressTracker';
+import { useAuth } from '@/lib/hooks/useAuth';
 
 const NICHES = [
   { id: 'curiosidades', label: 'Curiosidades', emoji: '🤯' },
@@ -38,10 +40,12 @@ const DURATIONS = [
 ];
 
 export default function ContentPage() {
+  const { user } = useAuth();
   const [selectedNiches, setSelectedNiches] = useState<string[]>(['curiosidades']);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(['TIKTOK']);
   const [duration, setDuration] = useState(60);
   const [generating, setGenerating] = useState(false);
+  const [activeVideoIds, setActiveVideoIds] = useState<string[]>([]);
 
   function toggleNiche(id: string) {
     setSelectedNiches((prev) =>
@@ -60,16 +64,18 @@ export default function ContentPage() {
     if (selectedPlatforms.length === 0) return toast.error('Selecione pelo menos uma plataforma');
 
     setGenerating(true);
+    setActiveVideoIds([]);
+
     try {
-      const promises = selectedPlatforms.map((platform) =>
-        api.post('/videos/generate', {
-          nicheId: selectedNiches[0], // simplified; real app uses nicheId from DB
-          platform,
-          duration,
-        })
+      const results = await Promise.all(
+        selectedPlatforms.map((platform) =>
+          api.post('/videos/generate', { nicheId: selectedNiches[0], platform, duration })
+        )
       );
-      await Promise.all(promises);
-      toast.success(`${selectedPlatforms.length} vídeo(s) sendo gerado(s)! Acompanhe em Meus Vídeos.`);
+
+      const videoIds = results.map((r) => r.data.data.videoId).filter(Boolean);
+      setActiveVideoIds(videoIds);
+      toast.success(`${videoIds.length} vídeo(s) em geração — acompanhe abaixo!`);
     } catch {
       toast.error('Erro ao iniciar geração. Verifique suas configurações.');
     } finally {
@@ -91,7 +97,9 @@ export default function ContentPage() {
             <div className="flex items-center gap-2 mb-4">
               <Globe className="w-4 h-4 text-primary" />
               <h2 className="font-semibold text-sm">Nichos</h2>
-              <span className="text-xs text-muted-foreground">({selectedNiches.length} selecionado{selectedNiches.length !== 1 ? 's' : ''})</span>
+              <span className="text-xs text-muted-foreground">
+                ({selectedNiches.length} selecionado{selectedNiches.length !== 1 ? 's' : ''})
+              </span>
             </div>
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
               {NICHES.map((niche) => (
@@ -132,7 +140,9 @@ export default function ContentPage() {
                 >
                   <div className={cn('w-8 h-1.5 rounded-full bg-gradient-to-r mb-3', p.color)} />
                   <p className="text-sm font-medium">{p.label}</p>
-                  <p className="text-xs text-muted-foreground mt-1">Max {p.duration >= 60 ? `${p.duration / 60}min` : `${p.duration}s`}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Max {p.duration >= 60 ? `${p.duration / 60}min` : `${p.duration}s`}
+                  </p>
                 </button>
               ))}
             </div>
@@ -186,6 +196,11 @@ export default function ContentPage() {
               </>
             )}
           </button>
+
+          {/* Real-time progress tracker */}
+          {user && activeVideoIds.length > 0 && (
+            <VideoProgressTracker userId={user.id} videoIds={activeVideoIds} />
+          )}
         </div>
       </motion.div>
     </div>

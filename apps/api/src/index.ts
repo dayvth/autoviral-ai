@@ -12,6 +12,10 @@ import { rateLimiter } from './middleware/rateLimiter';
 import { logger } from './lib/logger';
 import { initQueues } from './lib/queue';
 import { initScheduler } from './lib/scheduler';
+import { setIo } from './lib/socket';
+import { startScriptWorker } from './workers/script-worker';
+import { startVoiceWorker } from './workers/voice-worker';
+import { startVideoWorker } from './workers/video-worker';
 
 // Routes
 import authRoutes from './routes/auth';
@@ -129,6 +133,12 @@ const PORT = Number(process.env.PORT ?? 4000);
 async function bootstrap() {
   await initQueues();
   await initScheduler();
+
+  // Register io singleton before starting workers so emit calls don't fail
+  setIo(io);
+  startScriptWorker();
+  startVoiceWorker();
+  startVideoWorker();
 
   httpServer.listen(PORT, () => {
     logger.info(`🚀 AutoViral AI API running on port ${PORT}`);

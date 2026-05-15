@@ -19,7 +19,7 @@ function buildRedisConnection(): ConnectionOptions {
   };
 }
 
-const connection: ConnectionOptions = buildRedisConnection();
+export const connection: ConnectionOptions = buildRedisConnection();
 
 // ── Queue definitions ─────────────────────────────────────────
 export const QUEUES = {
@@ -83,6 +83,8 @@ export interface ScriptJobPayload {
   nicheId: string;
   trendId?: string;
   userId: string;
+  videoId?: string;
+  voiceId?: string;
   language: string;
   platform: string;
   duration: number;

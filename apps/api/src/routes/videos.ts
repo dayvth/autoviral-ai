@@ -148,6 +148,8 @@ router.post(
         nicheId: niche.id,
         trendId,
         userId,
+        videoId: video.id,
+        voiceId,
         language: niche.languages[0] ?? 'pt-BR',
         platform,
         duration,

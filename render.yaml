@@ -5,7 +5,7 @@ services:
     region: oregon
     plan: free
     rootDir: apps/api
-    buildCommand: npm install --include=dev && npx prisma generate --schema=../../packages/database/prisma/schema.prisma && npm run build
+    buildCommand: apt-get update -y && apt-get install -y ffmpeg && npm install --include=dev && npx prisma generate --schema=../../packages/database/prisma/schema.prisma && npm run build
     startCommand: npm start
     healthCheckPath: /health
     envVars:
@@ -57,3 +57,7 @@ services:
         value: 1
       - key: VIDEO_WORKER_CONCURRENCY
         value: 1
+      - key: APP_URL
+        sync: false
+      - key: ELEVENLABS_DEFAULT_VOICE_ID
+        value: pNInz6obpgDQGcFmaJgB

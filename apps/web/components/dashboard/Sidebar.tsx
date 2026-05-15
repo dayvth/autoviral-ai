@@ -2,67 +2,23 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
-  LayoutDashboard,
-  Video,
-  TrendingUp,
-  BarChart2,
-  Settings,
-  Users,
-  Calendar,
-  Zap,
-  CreditCard,
-  ChevronRight,
-  Flame,
+  LayoutDashboard, Video, TrendingUp, BarChart2, Settings,
+  Users, Calendar, Zap, CreditCard, ChevronRight, Flame,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/lib/hooks/useAuth';
 
 const navItems = [
-  {
-    label: 'Dashboard',
-    href: '/dashboard',
-    icon: LayoutDashboard,
-  },
-  {
-    label: 'Gerar Conteúdo',
-    href: '/content',
-    icon: Zap,
-    badge: 'IA',
-    badgeColor: 'bg-viral-purple/20 text-viral-purple border-viral-purple/30',
-  },
-  {
-    label: 'Meus Vídeos',
-    href: '/videos',
-    icon: Video,
-  },
-  {
-    label: 'Tendências',
-    href: '/trends',
-    icon: Flame,
-    badge: 'Novo',
-    badgeColor: 'bg-viral-red/20 text-viral-red border-viral-red/30',
-  },
-  {
-    label: 'Analytics',
-    href: '/analytics',
-    icon: BarChart2,
-  },
-  {
-    label: 'Contas Sociais',
-    href: '/accounts',
-    icon: Users,
-  },
-  {
-    label: 'Agendamentos',
-    href: '/schedules',
-    icon: Calendar,
-  },
-  {
-    label: 'Automação',
-    href: '/automation',
-    icon: TrendingUp,
-  },
+  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { label: 'Gerar Conteúdo', href: '/content', icon: Zap, badge: 'IA', badgeColor: 'bg-viral-purple/20 text-viral-purple border-viral-purple/30' },
+  { label: 'Meus Vídeos', href: '/videos', icon: Video },
+  { label: 'Tendências', href: '/trends', icon: Flame, badge: 'Novo', badgeColor: 'bg-viral-red/20 text-viral-red border-viral-red/30' },
+  { label: 'Analytics', href: '/analytics', icon: BarChart2 },
+  { label: 'Contas Sociais', href: '/accounts', icon: Users },
+  { label: 'Agendamentos', href: '/schedules', icon: Calendar },
+  { label: 'Automação', href: '/automation', icon: TrendingUp },
 ];
 
 const bottomItems = [
@@ -70,8 +26,19 @@ const bottomItems = [
   { label: 'Configurações', href: '/settings', icon: Settings },
 ];
 
+const PLAN_COLORS: Record<string, string> = {
+  FREE: 'text-muted-foreground',
+  PRO: 'text-viral-purple',
+  BUSINESS: 'text-viral-red',
+};
+
 export function Sidebar() {
   const pathname = usePathname();
+  const { user } = useAuth();
+
+  const initial = user?.name?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? 'U';
+  const planLabel = user?.plan ? `Plano ${user.plan}` : 'Carregando...';
+  const planColor = PLAN_COLORS[user?.plan ?? 'FREE'];
 
   return (
     <aside className="hidden lg:flex flex-col w-64 border-r border-border/50 bg-card/30 backdrop-blur-sm shrink-0">
@@ -93,16 +60,13 @@ export function Sidebar() {
         {navItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
           const Icon = item.icon;
-
           return (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
                 'group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
-                isActive
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
               )}
             >
               {isActive && (
@@ -130,16 +94,13 @@ export function Sidebar() {
         {bottomItems.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;
-
           return (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
-                isActive
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
               )}
             >
               <Icon className="w-4 h-4 shrink-0" />
@@ -149,15 +110,15 @@ export function Sidebar() {
         })}
 
         {/* User mini */}
-        <div className="mt-3 p-3 rounded-xl bg-secondary/40 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">
-            U
+        <Link href="/settings" className="mt-3 p-3 rounded-xl bg-secondary/40 flex items-center gap-3 hover:bg-secondary/60 transition-colors">
+          <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center text-xs font-bold text-primary shrink-0">
+            {initial}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium truncate">Usuário</p>
-            <p className="text-[11px] text-muted-foreground">Plano Pro</p>
+            <p className="text-xs font-medium truncate">{user?.name ?? user?.email ?? 'Usuário'}</p>
+            <p className={cn('text-[11px]', planColor)}>{planLabel}</p>
           </div>
-        </div>
+        </Link>
       </div>
     </aside>
   );

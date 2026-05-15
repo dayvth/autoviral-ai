@@ -125,8 +125,16 @@ export async function getDashboardStats(userId: string) {
     totalWatchTime: totalViews._sum.watchTimeSeconds ?? 0,
     totalLikes: totalViews._sum.likes ?? 0,
     dailyStats: recentAnalytics,
-    topVideos,
-    platformStats,
+    topVideos: topVideos.map((a) => ({
+      title: (a as any).video?.title ?? null,
+      platform: a.platform,
+      views: a.views ?? 0,
+      likes: a.likes ?? 0,
+    })),
+    platformStats: platformStats.map((p) => ({
+      platform: p.platform,
+      views: p._sum.views ?? 0,
+    })),
   };
 }
 

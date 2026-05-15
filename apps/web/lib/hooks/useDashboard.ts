@@ -21,7 +21,7 @@ export function useDashboard() {
       totalWatchTime: number;
       totalLikes: number;
       avgViralScore: number;
-      platformStats: Array<{ platform: string; _sum: { views: number } }>;
+      platformStats: Array<{ platform: string; views: number }>;
     } | undefined,
     isLoading,
     error,

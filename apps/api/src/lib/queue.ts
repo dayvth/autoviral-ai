@@ -1,11 +1,25 @@
 import { Queue, Worker, QueueEvents, ConnectionOptions } from 'bullmq';
 import { logger } from './logger';
 
-const connection: ConnectionOptions = {
-  host: process.env.REDIS_HOST ?? 'localhost',
-  port: Number(process.env.REDIS_PORT ?? 6379),
-  password: process.env.REDIS_PASSWORD,
-};
+function buildRedisConnection(): ConnectionOptions {
+  const url = process.env.REDIS_URL;
+  if (url) {
+    const parsed = new URL(url);
+    return {
+      host: parsed.hostname,
+      port: Number(parsed.port) || 6379,
+      password: parsed.password || undefined,
+      tls: parsed.protocol === 'rediss:' ? {} : undefined,
+    };
+  }
+  return {
+    host: process.env.REDIS_HOST ?? 'localhost',
+    port: Number(process.env.REDIS_PORT ?? 6379),
+    password: process.env.REDIS_PASSWORD,
+  };
+}
+
+const connection: ConnectionOptions = buildRedisConnection();
 
 // ── Queue definitions ─────────────────────────────────────────
 export const QUEUES = {

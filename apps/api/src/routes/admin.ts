@@ -44,4 +44,16 @@ router.get('/jobs', async (_req, res: Response, next) => {
   } catch (err) { next(err); }
 });
 
+// POST /api/admin/videos/reset-stuck — mark PENDING videos older than 10min as FAILED
+router.post('/videos/reset-stuck', async (_req, res: Response, next) => {
+  try {
+    const cutoff = new Date(Date.now() - 10 * 60 * 1000);
+    const result = await prisma.video.updateMany({
+      where: { status: { in: ['PENDING', 'SCRIPT_READY', 'VOICE_READY'] }, updatedAt: { lt: cutoff } },
+      data: { status: 'FAILED', errorMessage: 'Timeout — pipeline was re-deployed, please regenerate' },
+    });
+    res.json({ success: true, data: { updated: result.count } });
+  } catch (err) { next(err); }
+});
+
 export default router;

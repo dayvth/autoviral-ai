@@ -5,8 +5,9 @@ import { Users, Plus, CheckCircle2, AlertCircle, RefreshCw, Trash2, Loader2 } fr
 import { cn } from '@/lib/utils';
 import useSWR from 'swr';
 import { api } from '@/lib/api/client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { useSearchParams } from 'next/navigation';
 
 const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.06 } } };
 const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 30 } } };
@@ -41,10 +42,34 @@ async function fetchAccounts() {
   return res.data.data as any[];
 }
 
+const ERROR_MESSAGES: Record<string, string> = {
+  missing_token: 'Sessão expirada. Faça login novamente.',
+  invalid_token: 'Token inválido. Faça login novamente.',
+  oauth_denied: 'Autorização negada pelo usuário.',
+  youtube_not_configured: 'YouTube OAuth não configurado. Contate o suporte.',
+  invalid_callback: 'Callback OAuth inválido.',
+  oauth_pending: 'Integração em breve! Essa plataforma ainda não está disponível.',
+};
+
 export default function AccountsPage() {
+  const searchParams = useSearchParams();
   const { data: accounts, isLoading, mutate } = useSWR('/social/accounts', fetchAccounts, { revalidateOnFocus: false });
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [refreshingId, setRefreshingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const error = searchParams.get('error');
+    const success = searchParams.get('success');
+    const platform = searchParams.get('platform');
+
+    if (success === 'youtube_connected') {
+      toast.success('YouTube conectado com sucesso!');
+      mutate();
+    } else if (error) {
+      const msg = ERROR_MESSAGES[error] ?? `Erro: ${error}`;
+      toast.error(platform ? `${platform}: ${msg}` : msg);
+    }
+  }, []);
 
   async function handleDelete(id: string) {
     setDeletingId(id);
@@ -73,8 +98,11 @@ export default function AccountsPage() {
   }
 
   function handleConnect(platformId: string) {
-    toast.info(`Conectando ${platformId}... Redirecionando para autorização OAuth.`);
-    window.location.href = `${process.env.NEXT_PUBLIC_API_URL ?? 'https://autoviral-ai.onrender.com/api'}/social/oauth/${platformId.toLowerCase()}`;
+    const token = localStorage.getItem('autoviral_token') ?? '';
+    const apiBase = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+    const url = `${apiBase}/api/social/oauth/${platformId.toLowerCase()}?token=${encodeURIComponent(token)}`;
+    toast.info('Redirecionando para autorização...');
+    window.location.href = url;
   }
 
   const connectedPlatformIds = (accounts ?? []).map((a: any) => a.platform);

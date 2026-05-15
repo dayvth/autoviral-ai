@@ -61,3 +61,9 @@ services:
         sync: false
       - key: ELEVENLABS_DEFAULT_VOICE_ID
         value: pNInz6obpgDQGcFmaJgB
+      - key: YOUTUBE_CLIENT_ID
+        sync: false
+      - key: YOUTUBE_CLIENT_SECRET
+        sync: false
+      - key: API_BASE_URL
+        value: https://autoviral-api.onrender.com

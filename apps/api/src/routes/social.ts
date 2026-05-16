@@ -136,10 +136,8 @@ router.get('/oauth/youtube/callback', async (req: Request, res: Response, next) 
 
 // ── Authenticated routes ────────────────────────────────────────────────────────
 
-router.use(authenticate);
-
 // GET /api/social/accounts
-router.get('/accounts', async (req: AuthRequest, res: Response, next) => {
+router.get('/accounts', authenticate, async (req: AuthRequest, res: Response, next) => {
   try {
     const accounts = await prisma.socialAccount.findMany({
       where: { userId: req.user!.id },
@@ -154,7 +152,7 @@ router.get('/accounts', async (req: AuthRequest, res: Response, next) => {
 });
 
 // POST /api/social/accounts — save OAuth tokens manually
-router.post('/accounts', async (req: AuthRequest, res: Response, next) => {
+router.post('/accounts', authenticate, async (req: AuthRequest, res: Response, next) => {
   try {
     const { platform, accountId, accountName, accessToken, refreshToken, tokenExpiresAt, scopes, metadata } = req.body;
 
@@ -186,7 +184,7 @@ router.post('/accounts', async (req: AuthRequest, res: Response, next) => {
 });
 
 // DELETE /api/social/accounts/:id
-router.delete('/accounts/:id', async (req: AuthRequest, res: Response, next) => {
+router.delete('/accounts/:id', authenticate, async (req: AuthRequest, res: Response, next) => {
   try {
     const account = await prisma.socialAccount.findFirst({
       where: { id: req.params.id as string, userId: req.user!.id },

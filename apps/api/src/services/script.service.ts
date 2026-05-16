@@ -3,7 +3,9 @@ import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
 import { enqueueVoice } from '../lib/queue';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+function getOpenAI() {
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 export interface GenerateScriptOptions {
   nicheId: string;
@@ -85,7 +87,7 @@ export async function generateScript(opts: GenerateScriptOptions) {
 }
 
 async function runHookAgent(context: string, language: string, platform: string): Promise<string> {
-  const completion = await openai.chat.completions.create({
+  const completion = await getOpenAI().chat.completions.create({
     model: 'gpt-4o-mini',
     max_tokens: 300,
     messages: [
@@ -124,7 +126,7 @@ async function runStoryAgent(
   const wordsPerMinute = 150;
   const targetWords = Math.round((duration / 60) * wordsPerMinute);
 
-  const completion = await openai.chat.completions.create({
+  const completion = await getOpenAI().chat.completions.create({
     model: 'gpt-4o-mini',
     max_tokens: 1500,
     messages: [
@@ -162,7 +164,7 @@ Return ONLY the script body (no hook, no CTA), formatted for narration.`,
 }
 
 async function runCtaAgent(body: string, platform: string, language: string): Promise<string> {
-  const completion = await openai.chat.completions.create({
+  const completion = await getOpenAI().chat.completions.create({
     model: 'gpt-4o-mini',
     max_tokens: 150,
     messages: [
@@ -193,7 +195,7 @@ async function runMetaAgent(opts: {
   platform: string;
   language: string;
 }) {
-  const completion = await openai.chat.completions.create({
+  const completion = await getOpenAI().chat.completions.create({
     model: 'gpt-4o-mini',
     response_format: { type: 'json_object' },
     messages: [
@@ -234,7 +236,7 @@ async function estimateViralScore(opts: {
   hashtags: string[];
   platform: string;
 }): Promise<number> {
-  const completion = await openai.chat.completions.create({
+  const completion = await getOpenAI().chat.completions.create({
     model: 'gpt-4o-mini',
     response_format: { type: 'json_object' },
     messages: [

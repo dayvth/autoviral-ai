@@ -7,7 +7,9 @@ import { getIo } from '../lib/socket';
 
 const DEFAULT_VOICE_ID = process.env.ELEVENLABS_DEFAULT_VOICE_ID ?? 'pNInz6obpgDQGcFmaJgB';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+function getOpenAI() {
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 function emit(userId: string, videoId: string, stage: string, progress: number, message: string) {
   try {
@@ -138,7 +140,7 @@ export function startScriptWorker() {
 // ── OpenAI agents ──────────────────────────────────────────────
 
 async function generateHook(context: string, language: string, platform: string, style: string): Promise<string> {
-  const res = await openai.chat.completions.create({
+  const res = await getOpenAI().chat.completions.create({
     model: 'gpt-4o-mini',
     max_tokens: 300,
     messages: [
@@ -154,7 +156,7 @@ async function generateHook(context: string, language: string, platform: string,
 
 async function generateBody(hook: string, context: string, language: string, duration: number, style: string): Promise<string> {
   const targetWords = Math.round((duration / 60) * 150);
-  const res = await openai.chat.completions.create({
+  const res = await getOpenAI().chat.completions.create({
     model: 'gpt-4o-mini',
     max_tokens: 2000,
     messages: [
@@ -169,7 +171,7 @@ async function generateBody(hook: string, context: string, language: string, dur
 }
 
 async function generateCta(body: string, platform: string, language: string): Promise<string> {
-  const res = await openai.chat.completions.create({
+  const res = await getOpenAI().chat.completions.create({
     model: 'gpt-4o-mini',
     max_tokens: 150,
     messages: [{
@@ -181,7 +183,7 @@ async function generateCta(body: string, platform: string, language: string): Pr
 }
 
 async function generateMeta(opts: { hook: string; body: string; niche: string; platform: string; language: string }) {
-  const res = await openai.chat.completions.create({
+  const res = await getOpenAI().chat.completions.create({
     model: 'gpt-4o-mini',
     response_format: { type: 'json_object' },
     messages: [{

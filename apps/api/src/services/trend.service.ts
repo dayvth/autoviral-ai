@@ -3,7 +3,9 @@ import OpenAI from 'openai';
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+function getOpenAI() {
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 // ── Main trend research orchestrator ──────────────────────────
 
@@ -154,7 +156,7 @@ async function fetchGoogleTrends(keywords: string[], language: string): Promise<
 }
 
 async function generateAiTrends(niche: string, keywords: string[], language: string): Promise<RawTrend[]> {
-  const completion = await openai.chat.completions.create({
+  const completion = await getOpenAI().chat.completions.create({
     model: 'gpt-4o-mini',
     response_format: { type: 'json_object' },
     messages: [
@@ -189,7 +191,7 @@ Return JSON: { "trends": [{ "title", "description", "viralScore", "hashtags" }] 
 async function scoreTrends(trends: RawTrend[], niche: string): Promise<RawTrend[]> {
   if (trends.length === 0) return [];
 
-  const completion = await openai.chat.completions.create({
+  const completion = await getOpenAI().chat.completions.create({
     model: 'gpt-4o-mini',
     response_format: { type: 'json_object' },
     messages: [

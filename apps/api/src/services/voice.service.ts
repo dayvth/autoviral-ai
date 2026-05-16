@@ -4,10 +4,12 @@ import { createClient } from '@supabase/supabase-js';
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getSupabase() {
+  return createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 const ELEVENLABS_BASE = 'https://api.elevenlabs.io/v1';
 
@@ -27,6 +29,7 @@ function cleanScript(text: string) {
 }
 
 async function uploadAudio(videoId: string, buffer: Buffer): Promise<string> {
+  const supabase = getSupabase();
   const storagePath = `audio/${videoId}/narration.mp3`;
   const { error } = await supabase.storage
     .from(process.env.SUPABASE_STORAGE_BUCKET!)

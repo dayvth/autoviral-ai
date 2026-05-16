@@ -5,7 +5,7 @@ services:
     region: oregon
     plan: free
     rootDir: apps/api
-    buildCommand: apt-get update -y && apt-get install -y ffmpeg && (cd ../.. && npm install --include=dev) && npx prisma generate --schema=../../packages/database/prisma/schema.prisma && npm run build
+    buildCommand: apt-get update -y && apt-get install -y ffmpeg && npm install --include=dev && npx prisma generate --schema=../../packages/database/prisma/schema.prisma && npm run build
     startCommand: npm start
     healthCheckPath: /health
     envVars:

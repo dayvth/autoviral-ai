@@ -264,7 +264,7 @@ async function generateGradientBackground(workDir: string, output: string, durat
   );
 }
 
-async function uploadToStorage(videoId: string, videoPath: string, thumbPath: string, supabase: ReturnType<typeof createClient>) {
+async function uploadToStorage(videoId: string, videoPath: string, thumbPath: string, supabase: any) {
   const [videoBuf, thumbBuf] = await Promise.all([fs.readFile(videoPath), fs.readFile(thumbPath)]);
   const bucket = process.env.SUPABASE_STORAGE_BUCKET!;
 

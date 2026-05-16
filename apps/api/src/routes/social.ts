@@ -27,7 +27,7 @@ router.get('/oauth/:platform', async (req: Request, res: Response, next) => {
       return res.redirect(`${APP_URL}/accounts?error=invalid_token`);
     }
 
-    const platform = req.params.platform.toUpperCase().replace('-', '_');
+    const platform = (req.params.platform as string).toUpperCase().replace('-', '_');
 
     if (platform === 'YOUTUBE' || platform === 'YOUTUBE_SHORTS') {
       if (!process.env.YOUTUBE_CLIENT_ID || !process.env.YOUTUBE_CLIENT_SECRET) {

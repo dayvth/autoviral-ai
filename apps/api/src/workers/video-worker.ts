@@ -10,8 +10,19 @@ import { promisify } from 'util';
 import { connection, VideoJobPayload } from '../lib/queue';
 import { logger } from '../lib/logger';
 import { getIo } from '../lib/socket';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const ffmpegPath: string = require('ffmpeg-static');
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const ffprobePath: string = require('@ffprobe-installer/ffprobe').path;
 
 const execAsync = promisify(exec);
+
+function ffmpeg(args: string) {
+  return execAsync(`"${ffmpegPath}" ${args}`);
+}
+function ffprobe(args: string) {
+  return execAsync(`"${ffprobePath}" ${args}`);
+}
 const prisma = new PrismaClient();
 
 function getSupabase() {
@@ -160,8 +171,8 @@ export function startVideoWorker() {
 // ── FFmpeg helpers ────────────────────────────────────────────
 
 async function getMediaDuration(filePath: string): Promise<number> {
-  const { stdout } = await execAsync(
-    `ffprobe -v quiet -show_entries format=duration -of csv=p=0 "${filePath}"`
+  const { stdout } = await ffprobe(
+    `-v quiet -show_entries format=duration -of csv=p=0 "${filePath}"`
   );
   return parseFloat(stdout.trim());
 }
@@ -175,8 +186,8 @@ async function assembleBackground(clips: string[], output: string, targetDuratio
   const listContent = clips.map((c) => `file '${c}'`).join('\n');
   await fs.writeFile(concatFile, listContent);
 
-  await execAsync(
-    `ffmpeg -y -f concat -safe 0 -i "${concatFile}" ` +
+  await ffmpeg(
+    `-y -f concat -safe 0 -i "${concatFile}" ` +
     `-vf "scale=${size}:force_original_aspect_ratio=increase,crop=${w}:${h},setsar=1" ` +
     `-t ${targetDuration} -c:v libx264 -preset fast -crf 23 -an "${output}"`
   );
@@ -207,8 +218,8 @@ async function composeFinalVideo(
 
   filters.push(`ass='${subtitlePath}'`);
 
-  await execAsync(
-    `ffmpeg -y -i "${bgPath}" -i "${audioPath}" ` +
+  await ffmpeg(
+    `-y -i "${bgPath}" -i "${audioPath}" ` +
     `-vf "${filters.join(',')}" -c:v libx264 -preset medium -crf 20 ` +
     `-c:a aac -b:a 192k -shortest "${output}"`
   );
@@ -217,8 +228,8 @@ async function composeFinalVideo(
 async function generateThumbnail(videoPath: string, outputPath: string) {
   const duration = await getMediaDuration(videoPath);
   const timestamp = duration * 0.2;
-  await execAsync(
-    `ffmpeg -y -ss ${timestamp} -i "${videoPath}" -vframes 1 -q:v 2 "${outputPath}"`
+  await ffmpeg(
+    `-y -ss ${timestamp} -i "${videoPath}" -vframes 1 -q:v 2 "${outputPath}"`
   );
 }
 
@@ -258,8 +269,8 @@ async function generateGradientBackground(workDir: string, output: string, durat
   const w = orientation === 'VERTICAL' ? 1080 : 1920;
   const h = orientation === 'VERTICAL' ? 1920 : 1080;
   // Dark gradient background — looks clean for any niche
-  await execAsync(
-    `ffmpeg -y -f lavfi -i "gradients=s=${w}x${h}:c0=0x0a0a0f:c1=0x1a0a2e:c2=0x16213e:nb_colors=3:speed=0.3,format=yuv420p" ` +
+  await ffmpeg(
+    `-y -f lavfi -i "gradients=s=${w}x${h}:c0=0x0a0a0f:c1=0x1a0a2e:c2=0x16213e:nb_colors=3:speed=0.3,format=yuv420p" ` +
     `-t ${duration} -c:v libx264 -preset fast -crf 23 "${output}"`
   );
 }

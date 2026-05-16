@@ -36,7 +36,9 @@
     "openai": "^4.77.0",
     "@anthropic-ai/sdk": "^0.36.1",
     "@google/generative-ai": "^0.21.0",
-    "googleapis": "^144.0.0"
+    "googleapis": "^144.0.0",
+    "ffmpeg-static": "^5.2.0",
+    "@ffprobe-installer/ffprobe": "^1.4.1"
   },
   "devDependencies": {
     "typescript": "^5.7.2",

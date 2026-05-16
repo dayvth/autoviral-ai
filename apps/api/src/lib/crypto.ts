@@ -1,9 +1,13 @@
 import crypto from 'crypto';
 
 const ALGORITHM = 'aes-256-gcm';
-const KEY = Buffer.from(process.env.JWT_SECRET!.padEnd(32, '0').slice(0, 32));
+function getKey() {
+  const secret = process.env.JWT_SECRET ?? 'changeme-set-JWT_SECRET-in-production';
+  return Buffer.from(secret.padEnd(32, '0').slice(0, 32));
+}
 
 export function encrypt(text: string): string {
+  const KEY = getKey();
   const iv = crypto.randomBytes(16);
   const cipher = crypto.createCipheriv(ALGORITHM, KEY, iv);
   const encrypted = Buffer.concat([cipher.update(text, 'utf8'), cipher.final()]);
@@ -12,6 +16,7 @@ export function encrypt(text: string): string {
 }
 
 export function decrypt(encoded: string): string {
+  const KEY = getKey();
   const [ivHex, tagHex, encryptedHex] = encoded.split(':');
   const iv = Buffer.from(ivHex, 'hex');
   const tag = Buffer.from(tagHex, 'hex');
